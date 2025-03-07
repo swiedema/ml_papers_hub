@@ -54,10 +54,7 @@ def setup_logging(log_level=logging.INFO):
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
     )
 
     return logging.getLogger("paper_processing")
@@ -114,23 +111,25 @@ def get_paper_analysis(gemini_client, pdf_path, logger):
         logger.info(f"Generating analysis for {pdf_path}")
         response = gemini_client.models.generate_content(
             model="gemini-2.0-flash",
-            config={ 
-                'response_mime_type': 'application/json',
-                'response_schema': PaperAnalysis, 
-            }, 
+            config={
+                "response_mime_type": "application/json",
+                "response_schema": PaperAnalysis,
+            },
             contents=[
                 types.Part.from_bytes(
                     data=filepath.read_bytes(),
-                    mime_type='application/pdf',
+                    mime_type="application/pdf",
                 ),
-                prompt
-            ]
+                prompt,
+            ],
         )
         logger.info("Successfully generated analysis")
 
         # Convert response to PaperAnalysis model and then to dict
         try:
-            analysis_dict = PaperAnalysis.model_validate_json(response.text).model_dump()
+            analysis_dict = PaperAnalysis.model_validate_json(
+                response.text
+            ).model_dump()
             logger.debug(f"Analysis dict: {analysis_dict}")
             return analysis_dict
         except Exception as e:
@@ -146,15 +145,19 @@ def get_paper_analysis(gemini_client, pdf_path, logger):
 def process_single_paper(paper_info, temp_dir, paper_paths, gemini_client, logger):
     """Process a single paper with all the steps (thumbnail, compression, analysis)"""
     paper_id = paper_info["document_id"]
-    paper_arxiv_id = paper_info["arxiv_data.entry_id"].split('/')[-1].split('v')[0]
+    paper_arxiv_id = paper_info["arxiv_data.entry_id"].split("/")[-1].split("v")[0]
     pdf_path = [p for p in paper_paths if paper_arxiv_id in p]
 
     if len(pdf_path) == 0:
-        logger.warning(f"PDF not found for paper {paper_arxiv_id}. Probably didnt download. Skipping...")
+        logger.warning(
+            f"PDF not found for paper {paper_arxiv_id}. Probably didnt download. Skipping..."
+        )
         return
     pdf_path = pdf_path[0]
     if not os.path.exists(pdf_path):
-        logger.warning(f"PDF not found for paper {paper_arxiv_id} with path {pdf_path}. Skipping...")
+        logger.warning(
+            f"PDF not found for paper {paper_arxiv_id} with path {pdf_path}. Skipping..."
+        )
         return
 
     try:
@@ -163,16 +166,18 @@ def process_single_paper(paper_info, temp_dir, paper_paths, gemini_client, logge
         # Generate thumbnail in temporary directory
         thumb_path = os.path.join(temp_dir, f"{paper_id}_thumb.png")
         thumbnail_bytes = create_pdf_thumbnail(
-            pdf_path,
-            thumb_path,
-            max_size_bytes = 300 * 1024  # 300 kb
+            pdf_path, thumb_path, max_size_bytes=300 * 1024  # 300 kb
         )
         logger.info(f"Generated thumbnail for paper {paper_id}")
 
         # Compress PDF
-        pdf_path, compression_ratio = compress_pdf(pdf_path, pdf_path, remove_images=True)
+        pdf_path, compression_ratio = compress_pdf(
+            pdf_path, pdf_path, remove_images=True
+        )
         logger.info(f"Compressed PDF for paper {paper_id}")
-        logger.info(f"Size of compressed pdf: {os.path.getsize(pdf_path) / (1024 * 1024):.2f} MB")
+        logger.info(
+            f"Size of compressed pdf: {os.path.getsize(pdf_path) / (1024 * 1024):.2f} MB"
+        )
         logger.info(f"Compression ratio: {compression_ratio:.2f}%")
 
         # Generate paper analysis
@@ -183,11 +188,11 @@ def process_single_paper(paper_info, temp_dir, paper_paths, gemini_client, logge
             update_successful = update_paper_in_firestore(
                 paper_id=paper_id,
                 update_data={
-                    'status': 'processed',
-                    'thumbnail': thumbnail_bytes,
-                    'analysis': analysis,
+                    "status": "processed",
+                    "thumbnail": thumbnail_bytes,
+                    "analysis": analysis,
                 },
-                logger=logger
+                logger=logger,
             )
 
             if not update_successful:
@@ -199,7 +204,7 @@ def process_single_paper(paper_info, temp_dir, paper_paths, gemini_client, logge
             update_paper_in_firestore(
                 paper_id=paper_id,
                 update_data={"status": "ERROR-gen_analysis"},
-                logger=logger
+                logger=logger,
             )
             return
 
@@ -221,7 +226,7 @@ def process_papers():
 
     # Fetch new papers from Firestore
     fb_papers_info = fetch_specific_attributes_from_collection(
-        attributes=["arxiv_data.title", "arxiv_data.entry_id", "status"], 
+        attributes=["arxiv_data.title", "arxiv_data.entry_id", "status"],
         filters=[("status", "==", "new")],
     )
     logger.info(f"Found {len(fb_papers_info)} new papers to process")
@@ -230,7 +235,10 @@ def process_papers():
         return
 
     # Get papers from arXiv
-    queries = [paper["arxiv_data.entry_id"].split('/')[-1].split('v')[0] for paper in fb_papers_info]
+    queries = [
+        paper["arxiv_data.entry_id"].split("/")[-1].split("v")[0]
+        for paper in fb_papers_info
+    ]
     logger.debug(f"Queries: {queries}")
     papers = arxiv.get_papers(queries, verbose=True)
     logger.info(f"Fetched {len(papers)} papers from arXiv")
@@ -238,46 +246,58 @@ def process_papers():
     # Download papers to temporary directory
     with tempfile.TemporaryDirectory() as temp_dir:
         logger.info(f"Downloading papers to temp dir {temp_dir}...")
-        paper_paths, not_downloaded = arxiv.download_papers(dirpath=temp_dir, verbose=True, logger=logger)
+        paper_paths, not_downloaded = arxiv.download_papers(
+            dirpath=temp_dir, verbose=True, logger=logger
+        )
         logger.info(f"Downloaded {len(paper_paths)} papers to {temp_dir}")
         logger.info(f"Download not successful for {len(not_downloaded)} papers")
 
         # Update status to download_error for papers that failed to download
         not_downloaded_ids = []
         for paper in not_downloaded:
-            paper_id = [p["document_id"] for p in fb_papers_info if p["arxiv_data.entry_id"] == paper.entry_id][0]
+            paper_id = [
+                p["document_id"]
+                for p in fb_papers_info
+                if p["arxiv_data.entry_id"] == paper.entry_id
+            ][0]
             update_paper_in_firestore(
                 paper_id=paper_id,
                 update_data={"status": "ERROR-download"},
-                logger=logger
+                logger=logger,
             )
             logger.info(f"Updating status to ERROR-download for paper {paper_id}")
             not_downloaded_ids.append(paper_id)
 
         # remove papers that failed to download
-        fb_papers_info = [p for p in fb_papers_info if p["document_id"] not in not_downloaded_ids]
+        fb_papers_info = [
+            p for p in fb_papers_info if p["document_id"] not in not_downloaded_ids
+        ]
 
         # Process papers
         parallel = True  # Set to False for sequential processing
 
         if parallel:
             max_workers = 4
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=max_workers
+            ) as executor:
                 # Create a partial function with the common arguments
                 process_paper_partial = partial(
                     process_single_paper,
                     temp_dir=temp_dir,
                     paper_paths=paper_paths,
                     gemini_client=gemini_client,
-                    logger=logger
+                    logger=logger,
                 )
 
                 # Process papers in parallel with progress bar
-                list(tqdm(
-                    executor.map(process_paper_partial, fb_papers_info),
-                    total=len(fb_papers_info),
-                    desc="Processing papers"
-                ))
+                list(
+                    tqdm(
+                        executor.map(process_paper_partial, fb_papers_info),
+                        total=len(fb_papers_info),
+                        desc="Processing papers",
+                    )
+                )
         else:
             # Sequential processing with progress bar
             for paper_info in tqdm(fb_papers_info, desc="Processing papers"):
@@ -286,7 +306,7 @@ def process_papers():
                     temp_dir=temp_dir,
                     paper_paths=paper_paths,
                     gemini_client=gemini_client,
-                    logger=logger
+                    logger=logger,
                 )
 
     logger.info("Completed paper processing pipeline")

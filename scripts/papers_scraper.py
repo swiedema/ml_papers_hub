@@ -7,7 +7,11 @@ import logging
 import os
 import sys
 from datetime import datetime
-from src.firebase import initialize_firebase_client, fetch_specific_attributes_from_collection, add_papers_to_firestore
+from src.firebase import (
+    initialize_firebase_client,
+    fetch_specific_attributes_from_collection,
+    add_papers_to_firestore,
+)
 
 
 PROJECT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -32,10 +36,7 @@ def setup_logging(log_level=logging.INFO):
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
     )
 
     return logging.getLogger("papers_scraper")
@@ -62,8 +63,10 @@ def scrape_papers():
         logger.info("Finding new papers from Gmail")
         arxiv_urls = scrape_paper_urls_from_gmail(only_arxiv_urls=True)
         logger.info(f"Found {len(arxiv_urls)} URLs from Gmail")
-        arxiv_queries = [url.split('/')[-1] for url in arxiv_urls]
-        arxiv_queries = [arxiv_id for arxiv_id in arxiv_queries if is_arxiv_id(arxiv_id)]
+        arxiv_queries = [url.split("/")[-1] for url in arxiv_urls]
+        arxiv_queries = [
+            arxiv_id for arxiv_id in arxiv_queries if is_arxiv_id(arxiv_id)
+        ]
         arxiv_queries = list(set(arxiv_queries))
         logger.info(f"{len(arxiv_queries)} are valid arXiv IDs")
 
@@ -75,20 +78,26 @@ def scrape_papers():
 
         # convert papers to dict
         papers_dict = arxiv.papers_to_dict()
-        papers_dict = [{"arxiv_data": paper_dict, "status": "new"} for paper_dict in papers_dict]
+        papers_dict = [
+            {"arxiv_data": paper_dict, "status": "new"} for paper_dict in papers_dict
+        ]
         logger.info(f"Converted {len(papers_dict)} papers to dict")
 
         # fetch papers from firestore
         fb_papers_dict = fetch_specific_attributes_from_collection(
             attributes=["arxiv_data.title", "status"],
             filters=[("status", "!=", "test")],
-            logger=logger
+            logger=logger,
         )
         logger.info(f"Fetched {len(fb_papers_dict)} papers from firestore")
 
         # remove papers from papers_dict that are already in fb_papers_dict
-        fb_papers_titles = [paper['arxiv_data.title'] for paper in fb_papers_dict]
-        papers_dict = [paper for paper in papers_dict if paper["arxiv_data"]["title"] not in fb_papers_titles]
+        fb_papers_titles = [paper["arxiv_data.title"] for paper in fb_papers_dict]
+        papers_dict = [
+            paper
+            for paper in papers_dict
+            if paper["arxiv_data"]["title"] not in fb_papers_titles
+        ]
         logger.info(f"{len(papers_dict)} new papers left to save to firestore")
 
         # save papers to firestore

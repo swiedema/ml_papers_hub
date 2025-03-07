@@ -8,15 +8,18 @@ cachecontrol==0.14.2
 cachetools==5.5.2
 certifi==2025.1.31
 cffi==1.17.1
+cfgv==3.4.0
 charset-normalizer==3.4.1
 comm==0.2.2
 cryptography==44.0.2
 datetime==5.5
 debugpy==1.8.13
 decorator==5.2.1
+distlib==0.3.9
 distro==1.9.0
 executing==2.2.0
 feedparser==6.0.11
+filelock==3.17.0
 firebase-admin==6.4.0
 google-ai-generativelanguage==0.4.0
 google-api-core==2.24.1
@@ -38,6 +41,7 @@ h11==0.14.0
 httpcore==1.0.7
 httplib2==0.22.0
 httpx==0.28.1
+identify==2.6.8
 idna==3.10
 ipykernel==6.29.5
 ipython==9.0.1
@@ -50,6 +54,7 @@ matplotlib-inline==0.1.7
 -e file:///Users/simon/workspace/projects/ml_papers_hub
 msgpack==1.1.0
 nest-asyncio==1.6.0
+nodeenv==1.9.1
 numpy==1.26.4
 oauthlib==3.2.2
 openai==1.65.4
@@ -62,6 +67,7 @@ pexpect==4.9.0
 pillow==10.2.0
 pip==24.3.1
 platformdirs==4.3.6
+pre-commit==4.1.0
 prompt-toolkit==3.0.50
 proto-plus==1.26.0
 protobuf==4.25.6
@@ -82,6 +88,7 @@ pytesseract==0.3.10
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytz==2025.1
+pyyaml==6.0.2
 pyzmq==26.2.1
 requests==2.32.3
 requests-oauthlib==2.0.0
@@ -100,6 +107,7 @@ typing-extensions==4.12.2
 tzdata==2025.1
 uritemplate==4.1.1
 urllib3==2.3.0
+virtualenv==20.29.3
 wcwidth==0.2.13
 websockets==14.2
 zope-interface==7.2

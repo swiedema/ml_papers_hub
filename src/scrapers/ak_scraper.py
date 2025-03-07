@@ -29,7 +29,7 @@ def scrape_ak_huggingface_daily_paper_titles(start_date: str = None):
         date_str = current_date.strftime("%Y-%m-%d")
         url = f"https://huggingface.co/papers?date={date_str}"
         response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, "html.parser")
 
         # Find all paper entries
         paper_elements = soup.text.split("Submitted by")

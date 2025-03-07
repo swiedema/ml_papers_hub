@@ -14,12 +14,16 @@ def initialize_firebase_client(project_dir=None, logger=None):
         PROJECT_DIR = os.environ.get("PROJECT_DIR")
     else:
         PROJECT_DIR = project_dir
-    credentials_file_path = os.path.join(PROJECT_DIR, os.getenv("FIREBASE_CREDENTIALS_RELATIVE_PATH"))
+    credentials_file_path = os.path.join(
+        PROJECT_DIR, os.getenv("FIREBASE_CREDENTIALS_RELATIVE_PATH")
+    )
 
     try:
         if not os.path.exists(credentials_file_path):
             logger.error(f"❌ Credentials file not found: {credentials_file_path}")
-            raise FileNotFoundError(f"Credentials directory not found: {credentials_file_path}")
+            raise FileNotFoundError(
+                f"Credentials directory not found: {credentials_file_path}"
+            )
 
         cred = credentials.Certificate(credentials_file_path)
 
@@ -38,7 +42,9 @@ def initialize_firebase_client(project_dir=None, logger=None):
             logger.error(f"Traceback: {traceback.format_exc()}")
 
 
-def get_all_data_from_firestore_collection(collection_name: str = "papers_app") -> list[dict]:
+def get_all_data_from_firestore_collection(
+    collection_name: str = "papers_app",
+) -> list[dict]:
     """
     Fetches all data from Firestore.
     """
@@ -48,10 +54,10 @@ def get_all_data_from_firestore_collection(collection_name: str = "papers_app") 
 
 
 def fetch_specific_attributes_from_collection(
-    attributes: list[str], 
-    collection_name: str = "papers_app", 
+    attributes: list[str],
+    collection_name: str = "papers_app",
     filters: list[tuple] = None,
-    logger=None
+    logger=None,
 ) -> list[dict]:
     """
     Fetches specific attributes from documents in a Firestore collection with optional filtering.
@@ -97,7 +103,11 @@ def fetch_specific_attributes_from_collection(
                     parts = field.split(".")
                     value = doc_data
                     for part in parts:
-                        if value is not None and isinstance(value, dict) and part in value:
+                        if (
+                            value is not None
+                            and isinstance(value, dict)
+                            and part in value
+                        ):
                             value = value.get(part)
                         else:
                             value = None
@@ -133,7 +143,9 @@ def add_papers_to_firestore(papers: list[dict], collection_name: str = "papers_a
         firestore_db.collection(collection_name).add(paper)
 
 
-def add_single_paper_to_firestore(paper: dict, collection_name: str = "papers_app", custom_id: str = None):
+def add_single_paper_to_firestore(
+    paper: dict, collection_name: str = "papers_app", custom_id: str = None
+):
     """
     Adds a single paper to Firestore.
 
@@ -158,7 +170,9 @@ def add_single_paper_to_firestore(paper: dict, collection_name: str = "papers_ap
         return doc_ref[1].id
 
 
-def remove_all_papers_from_firestore(collection_name: str = "papers_app", exclude_ids: list[str] = None):
+def remove_all_papers_from_firestore(
+    collection_name: str = "papers_app", exclude_ids: list[str] = None
+):
     """
     Removes all papers from Firestore.
     """
@@ -172,7 +186,9 @@ def remove_all_papers_from_firestore(collection_name: str = "papers_app", exclud
             doc.reference.delete()
 
 
-def delete_paper_from_firestore(paper_id: str, collection_name: str = "papers_app", logger=None):
+def delete_paper_from_firestore(
+    paper_id: str, collection_name: str = "papers_app", logger=None
+):
     """
     Deletes a paper from Firestore.
     """
@@ -186,7 +202,9 @@ def delete_paper_from_firestore(paper_id: str, collection_name: str = "papers_ap
         return True
     except Exception as e:
         if logger is not None:
-            logger.error(f"Error deleting paper {paper_id} from {collection_name}: {str(e)}")
+            logger.error(
+                f"Error deleting paper {paper_id} from {collection_name}: {str(e)}"
+            )
             logger.error(f"Traceback: {traceback.format_exc()}")
         else:
             print(f"Error deleting paper {paper_id} from {collection_name}: {str(e)}")
@@ -195,9 +213,7 @@ def delete_paper_from_firestore(paper_id: str, collection_name: str = "papers_ap
 
 
 def update_all_papers_status(
-    target_status: str,
-    collection_name: str = "papers_app",
-    logger=None
+    target_status: str, collection_name: str = "papers_app", logger=None
 ) -> bool:
     """
     Updates the status field of all papers in Firestore to the target status.
@@ -216,15 +232,17 @@ def update_all_papers_status(
     try:
         # Get all documents in the collection
         docs = firestore_db.collection(collection_name).stream()
-        
+
         for doc in docs:
             # Skip test papers
-            if doc.id.startswith('test_paper'):
+            if doc.id.startswith("test_paper"):
                 continue
             try:
                 doc.reference.update({"status": target_status})
                 if logger is not None:
-                    logger.info(f"Updated status to '{target_status}' for paper {doc.id}")
+                    logger.info(
+                        f"Updated status to '{target_status}' for paper {doc.id}"
+                    )
             except Exception as e:
                 success = False
                 if logger is not None:
@@ -247,10 +265,7 @@ def update_all_papers_status(
 
 
 def update_paper_in_firestore(
-    paper_id: str,
-    update_data: dict,
-    collection_name: str = "papers_app",
-    logger=None
+    paper_id: str, update_data: dict, collection_name: str = "papers_app", logger=None
 ) -> bool:
     """
     Updates a paper document in Firestore with new data.

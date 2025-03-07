@@ -33,10 +33,7 @@ def setup_logging(log_level=logging.INFO):
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
     )
 
     return logging.getLogger("main_scraper")
@@ -45,8 +42,8 @@ def setup_logging(log_level=logging.INFO):
 def run_scrapers():
     """Run both scrapers in sequence."""
     logger = setup_logging()
-    pt_time = datetime.now(pytz.timezone('America/Los_Angeles'))
-    time_str = pt_time.strftime('%Y-%m-%d %H:%M:%S %Z')
+    pt_time = datetime.now(pytz.timezone("America/Los_Angeles"))
+    time_str = pt_time.strftime("%Y-%m-%d %H:%M:%S %Z")
     logger.info(f"Starting scraping cycle at {time_str}")
 
     try:
@@ -66,13 +63,13 @@ def run_scrapers():
 
 def main():
     logger = setup_logging()
-    pt_timezone = pytz.timezone('America/Los_Angeles')
+    pt_timezone = pytz.timezone("America/Los_Angeles")
     current_time = datetime.now(pt_timezone)
-    time_str = current_time.strftime('%Y-%m-%d %H:%M:%S %Z')
+    time_str = current_time.strftime("%Y-%m-%d %H:%M:%S %Z")
     logger.info(f"Starting main scraper service at {time_str}")
 
     # Schedule job to run at midnight Pacific Time
-    schedule.every().day.at("00:00").do(run_scrapers).tag('pacific-time')
+    schedule.every().day.at("00:00").do(run_scrapers).tag("pacific-time")
 
     # Run immediately if requested (commented out by default)
     # run_scrapers()
@@ -83,12 +80,12 @@ def main():
             next_run = schedule.next_run()
             if next_run:
                 next_run_pt = next_run.astimezone(pt_timezone)
-                time_str = next_run_pt.strftime('%Y-%m-%d %H:%M:%S %Z')
+                time_str = next_run_pt.strftime("%Y-%m-%d %H:%M:%S %Z")
                 logger.debug(f"Next run scheduled for: {time_str}")
-            
+
             schedule.run_pending()
             time.sleep(60)  # Check every minute
-            
+
         except KeyboardInterrupt:
             logger.info("Received keyboard interrupt, shutting down...")
             sys.exit(0)
