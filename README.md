@@ -1,2 +1,3 @@
 # ML Papers Hub
-📚 Minimal web app for organizing and managing research papers with AI features like summarization, audio gen, embeddings, etc.
+
+A minimal web app to scrape and manage papers with a bunch of ML features to help streamline the organization and curation of papers.

@@ -1,0 +1,14 @@
+{
+  "formatOnSave": true,
+  "formatOnPaste": true,
+  "python": {
+    "formatter": "black",
+    "linter": "ruff",
+    "formatOnSave": true
+  },
+  "editor": {
+    "tabSize": 4,
+    "insertSpaces": true,
+    "rulers": [88]
+  }
+} 
