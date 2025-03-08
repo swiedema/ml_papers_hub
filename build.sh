@@ -31,12 +31,6 @@ source .venv/bin/activate
 
 # Install dependencies from lock file
 echo "Installing dependencies..."
-if [ -f "uv.lock" ]; then
-    echo "Installing from uv.lock..."
-    "$HOME/.local/bin/uv" pip sync
-else
-    echo "No uv.lock found, installing from requirements.txt..."
-    "$HOME/.local/bin/uv" pip install -r requirements.txt
-fi
+"$HOME/.local/bin/uv" pip install -r requirements.txt
 
 echo "Build completed successfully!"
