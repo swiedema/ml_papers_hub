@@ -7,25 +7,36 @@ set -e
 if ! command -v uv &> /dev/null; then
     echo "Installing uv..."
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    export PATH="/root/.cargo/bin:$PATH"  # Add uv to PATH
+    
+    # Add uv to PATH
+    export PATH="$HOME/.local/bin:$PATH"
+    
+    # Source the environment file that uv creates
+    if [ -f "$HOME/.local/bin/env" ]; then
+        source "$HOME/.local/bin/env"
+    fi
 fi
 
-# reload shell
-source $HOME/.local/bin/env
+# Verify uv is available
+if ! command -v uv &> /dev/null; then
+    echo "Error: uv is not available in PATH"
+    echo "Current PATH: $PATH"
+    exit 1
+fi
 
 # Create and activate virtual environment
 echo "Creating virtual environment..."
-uv venv .venv
+"$HOME/.local/bin/uv" venv .venv
 source .venv/bin/activate
 
 # Install dependencies from lock file
 echo "Installing dependencies..."
 if [ -f "uv.lock" ]; then
     echo "Installing from uv.lock..."
-    uv pip sync
+    "$HOME/.local/bin/uv" pip sync
 else
     echo "No uv.lock found, installing from requirements.txt..."
-    uv pip install -r requirements.txt
+    "$HOME/.local/bin/uv" pip install -r requirements.txt
 fi
 
 echo "Build completed successfully!"
