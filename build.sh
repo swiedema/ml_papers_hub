@@ -10,6 +10,9 @@ if ! command -v uv &> /dev/null; then
     export PATH="/root/.cargo/bin:$PATH"  # Add uv to PATH
 fi
 
+# reload shell
+source $HOME/.local/bin/env
+
 # Create and activate virtual environment
 echo "Creating virtual environment..."
 uv venv .venv
