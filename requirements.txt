@@ -61,7 +61,6 @@ jupyter-client==8.6.3
 jupyter-core==5.7.2
 markupsafe==3.0.2
 matplotlib-inline==0.1.7
--e file:///Users/simon/workspace/projects/ml_papers_hub
 msgpack==1.1.0
 narwhals==1.29.1
 nest-asyncio==1.6.0

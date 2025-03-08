@@ -33,4 +33,10 @@ source .venv/bin/activate
 echo "Installing dependencies..."
 "$HOME/.local/bin/uv" pip install -r requirements.txt
 
+# Install your project as a package
+if [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then
+    echo "Installing project package..."
+    "$HOME/.local/bin/uv" pip install .
+fi
+
 echo "Build completed successfully!"
