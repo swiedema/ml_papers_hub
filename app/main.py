@@ -1,16 +1,20 @@
 import pandas as pd
 import streamlit as st
+from src.firebase import initialize_firebase_client
 
 # Set page configuration
 st.set_page_config(
-    page_title="Papers Manager",
+    page_title="ML Papers Hub",
     page_icon="📚",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+# Initialize Firebase client
+initialize_firebase_client()
+
 # Main app header
-st.title("Papers Manager")
+st.title("ML Papers Hub")
 st.markdown("A simple application to manage your research papers.")
 
 # Sidebar
@@ -28,7 +32,7 @@ with st.sidebar:
     )
 
 # Main content
-st.header("Welcome to Papers Manager")
+st.header("Welcome to ML Papers Hub")
 st.markdown(
     """
 This application allows you to:

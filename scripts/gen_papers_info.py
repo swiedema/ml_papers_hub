@@ -82,24 +82,29 @@ def get_paper_analysis(gemini_client, pdf_path, logger):
     prompt = """
     Analyze this academic machine learning research paper and provide a comprehensive analysis with the following structure:
 
-    1. SUMMARY (250-300 words): Provide a thorough overview of the paper's key contributions, methodology, and findings.
+    1. SUMMARY: Provide a thorough overview of the paper's key contributions, methodology, and findings.
 
-    2. SHORT DESCRIPTION (1-2 sentences): Concisely capture the paper's core innovation or contribution.
+    2. SHORT DESCRIPTION (TLDR - 50-100 words): Provide a concise overview that covers:
+       - The problem/challenge being addressed
+       - The proposed solution/methodology
+       - Key results/findings
+       - Main limitations or future work directions
+       Make it accessible while maintaining technical accuracy.
 
-    3. PROBLEM STATEMENT (100 words): Clearly articulate the specific research gap or challenge the paper addresses, including why this problem is significant.
+    3. PROBLEM STATEMENT: Clearly articulate the specific research gap or challenge the paper addresses, including why this problem is significant.
 
-    4. METHODOLOGY (300-400 words): 
+    4. METHODOLOGY:
        - Detail the novel technical approach proposed
        - Highlight key algorithmic innovations
        - Explain the theoretical foundations
        - Describe implementation details critical to understanding the method
 
-    5. RESULTS (150-200 words):
+    5. RESULTS:
        - Summarize quantitative performance metrics
        - Compare against relevant baselines
        - Note any particularly impressive or unexpected findings
 
-    6. LIMITATIONS AND FUTURE WORK (100-150 words):
+    6. LIMITATIONS AND FUTURE WORK:
        - Identify constraints or weaknesses acknowledged by the authors
        - Note any unaddressed edge cases or scenarios
        - Mention proposed directions for future research

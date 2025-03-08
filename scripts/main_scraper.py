@@ -6,9 +6,10 @@ import time
 import logging
 import schedule
 import pytz
-from datetime import datetime
-from scripts.papers_scraper import scrape_papers
-from scripts.gen_papers_info import process_papers
+from datetime import datetime, time as dt_time
+from papers_scraper import scrape_papers
+from gen_papers_info import process_papers
+import argparse
 
 
 PROJECT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -61,18 +62,39 @@ def run_scrapers():
         logger.exception(f"An error occurred during scraping cycle: {str(e)}")
 
 
+def parse_time(time_str):
+    """Validate and parse time string in HH:MM format."""
+    try:
+        return datetime.strptime(time_str, "%H:%M").time()
+    except ValueError:
+        raise argparse.ArgumentTypeError("Time must be in HH:MM format (24-hour)")
+
+
 def main():
+    # Add argument parsing
+    parser = argparse.ArgumentParser(
+        description="Run scraper with configurable schedule time"
+    )
+    parser.add_argument(
+        "--time",
+        type=parse_time,
+        default=dt_time(0, 0),  # Default to midnight
+        help="Daily trigger time in HH:MM format (24-hour), default: 00:00",
+    )
+    args = parser.parse_args()
+
     logger = setup_logging()
     pt_timezone = pytz.timezone("America/Los_Angeles")
     current_time = datetime.now(pt_timezone)
     time_str = current_time.strftime("%Y-%m-%d %H:%M:%S %Z")
     logger.info(f"Starting main scraper service at {time_str}")
 
-    # Schedule job to run at midnight Pacific Time
-    schedule.every().day.at("00:00").do(run_scrapers).tag("pacific-time")
+    # Schedule job to run at specified time Pacific Time
+    schedule.every().day.at(args.time.strftime("%H:%M")).do(run_scrapers).tag(
+        "pacific-time"
+    )
 
-    # Run immediately if requested (commented out by default)
-    # run_scrapers()
+    logger.info(f"Scheduled daily run for {args.time.strftime('%H:%M')} PT")
 
     # Keep the script running
     while True:

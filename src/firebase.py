@@ -2,6 +2,7 @@ from firebase_admin import credentials, firestore
 import firebase_admin
 import os
 import traceback
+from datetime import datetime
 from dotenv import load_dotenv
 
 
@@ -140,6 +141,8 @@ def add_papers_to_firestore(papers: list[dict], collection_name: str = "papers_a
     """
     firestore_db = firebase_admin.firestore.client()
     for paper in papers:
+        # Add timestamp for when paper was added to Firestore
+        paper["created_at"] = datetime.now()
         firestore_db.collection(collection_name).add(paper)
 
 
