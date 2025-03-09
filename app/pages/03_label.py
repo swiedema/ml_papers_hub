@@ -25,7 +25,17 @@ def update_label(label_value):
         st.error("Failed to update paper label. Please try again.")
 
 
-st.title("Label Papers")
+# Create a row for the title and refresh button
+title_col, refresh_col = st.columns([6, 1])
+with title_col:
+    st.title("Label Papers")
+with refresh_col:
+    if st.button(
+        "🔄", help="Refresh Papers", key="refresh_button", use_container_width=True
+    ):
+        st.session_state.papers = None
+        st.session_state.current_index = 0
+        st.rerun()
 
 # Fetch papers that need labeling
 if st.session_state.get("papers") is None:
@@ -36,7 +46,7 @@ if st.session_state.get("papers") is None:
                 "arxiv_data.abstract",
                 "analysis",
                 "thumbnail",
-                # "label",
+                "label",
             ],
             filters=[("status", "==", "processed")],
         )

@@ -9,15 +9,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def initialize_firebase_client(project_dir=None, logger=None):
+def initialize_firebase_client(credentials_file_path=None, logger=None):
     """Initialize Firebase Admin SDK."""
-    if project_dir is None:
-        PROJECT_DIR = os.environ.get("PROJECT_DIR")
-    else:
-        PROJECT_DIR = project_dir
-    credentials_file_path = os.path.join(
-        PROJECT_DIR, os.getenv("FIREBASE_CREDENTIALS_RELATIVE_PATH")
-    )
+    if credentials_file_path is None:
+        credentials_file_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
 
     try:
         if not os.path.exists(credentials_file_path):
