@@ -1,18 +1,14 @@
 # Papers Hub
 
-A minimalistic web application for managing and analyzing research papers, featuring automated scraping, AI-powered analysis, and intelligent organization tools.
+A minimalistic web application for managing and analyzing research papers in bulk, featuring automated scraping, AI-powered analysis, and intelligent organization tools.
 
 ## Features
 
 - **Paper Collection**: Multi-source paper scraping from Hugging Face, Gmail, arXiv, and direct uploads
 
-- **Automated Processing**: AI-powered paper analysis using Gemini, including summaries, key insights, and PDF processing
-
-- **Organization**: Smart classification, custom labeling, and bulk processing capabilities
+- **Automated Processing**: Bulk paper analysis using Gemini, including summaries, key insights, and PDF processing, smart classification and custom labeling.
 
 - **Research Tools**: Interactive paper viewing with AI-assisted analysis and discussion
-
-- **User Interface**: Modern Streamlit-based interface with real-time management capabilities
 
 ## Setup
 
