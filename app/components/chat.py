@@ -60,7 +60,9 @@ class Chat(ABC):
                 st.rerun()
 
         # Display existing messages
-        for message in st.session_state[self.messages_key]:
+        for message in st.session_state[self.messages_key][
+            1:
+        ]:  # Skip the system message
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
@@ -74,8 +76,6 @@ class Chat(ABC):
     def _add_user_message(self, prompt):
         """Add a user message to the chat history."""
         st.session_state[self.messages_key].append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
 
     @abstractmethod
     def _generate_response(self, prompt):
@@ -97,19 +97,20 @@ class OpenAIChat(Chat):
 
     def _generate_response(self, prompt):
         """Generate and display assistant response using OpenAI."""
-        with st.chat_message("assistant"):
-            stream = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": m["role"], "content": m["content"]}
-                    for m in st.session_state[self.messages_key]
-                ],
-                stream=True,
-            )
-            response = st.write_stream(stream)
+        message_placeholder = st.empty()
+        stream = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state[self.messages_key]
+            ],
+            stream=True,
+        )
+        response = message_placeholder.write_stream(stream)
         st.session_state[self.messages_key].append(
             {"role": "assistant", "content": response}
         )
+        st.rerun()
 
     def clear_history(self):
         """Clear the chat history."""
@@ -132,31 +133,36 @@ class GeminiChat(Chat):
 
     def _generate_response(self, prompt):
         """Generate and display assistant response using Gemini."""
-        with st.chat_message("assistant"):
-            if self.pdf_path:
-                # If PDF context is provided, use content generation API
-                pdf_file = pathlib.Path(self.pdf_path)
-                system_context = st.session_state[self.messages_key][0]["content"]
-                response_stream = self.client.models.generate_content_stream(
-                    model=self.model,
-                    contents=[
-                        types.Part.from_bytes(
-                            data=pdf_file.read_bytes(),
-                            mime_type="application/pdf",
-                        ),
-                        f"{system_context}\n\nBased on the PDF content above, please respond to: {prompt}",
-                    ],
-                )
-                response = st.write_stream((chunk.text for chunk in response_stream))
-            else:
-                # Use regular chat API if no PDF context
-                response_stream = st.session_state[self.chat_key].send_message_stream(
-                    prompt
-                )
-                response = st.write_stream((chunk.text for chunk in response_stream))
+        message_placeholder = st.empty()
+        if self.pdf_path:
+            # If PDF context is provided, use content generation API
+            pdf_file = pathlib.Path(self.pdf_path)
+            system_context = st.session_state[self.messages_key][0]["content"]
+            response_stream = self.client.models.generate_content_stream(
+                model=self.model,
+                contents=[
+                    types.Part.from_bytes(
+                        data=pdf_file.read_bytes(),
+                        mime_type="application/pdf",
+                    ),
+                    f"{system_context}\n\nBased on the PDF content above, please respond to: {prompt}",
+                ],
+            )
+            response = message_placeholder.write_stream(
+                (chunk.text for chunk in response_stream)
+            )
+        else:
+            # Use regular chat API if no PDF context
+            response_stream = st.session_state[self.chat_key].send_message_stream(
+                prompt
+            )
+            response = message_placeholder.write_stream(
+                (chunk.text for chunk in response_stream)
+            )
         st.session_state[self.messages_key].append(
             {"role": "assistant", "content": response}
         )
+        st.rerun()
 
     def clear_history(self):
         """Clear the chat history and create a new chat session."""

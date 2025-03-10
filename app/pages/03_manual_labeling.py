@@ -42,16 +42,39 @@ if "current_index" not in st.session_state:
 
 # Fetch papers that need labeling
 with st.spinner("Fetching papers..."):
-    papers = fetch_specific_attributes_from_collection(
-        attributes=[
-            "arxiv_data.title",
-            "arxiv_data.abstract",
-            "analysis",
-            "thumbnail",
-            "label",
-        ],
-        filters=[("status", "==", "processed")],
-    )
+    # Define required attributes
+    required_attributes = [
+        "arxiv_data.title",
+        "arxiv_data.abstract",
+        "analysis",
+        "thumbnail",
+        "label",
+    ]
+
+    # Check if papers are already in session state and have all required attributes
+    if "papers_cache" in st.session_state:
+        papers = st.session_state.papers_cache
+        # Check if all required attributes are present in the first paper
+        if papers and all(
+            any(p.get(attr) is not None for p in papers) for attr in required_attributes
+        ):
+            pass  # Use cached papers
+        else:
+            # If missing attributes, fetch from database
+            papers = fetch_specific_attributes_from_collection(
+                attributes=required_attributes,
+                filters=[("status", "==", "processed")],
+            )
+            # Cache the papers in session state
+            st.session_state.papers_cache = papers
+    else:
+        # If not in cache, fetch from database
+        papers = fetch_specific_attributes_from_collection(
+            attributes=required_attributes,
+            filters=[("status", "==", "processed")],
+        )
+        # Cache the papers in session state
+        st.session_state.papers_cache = papers
 
 # Filter out papers that already have labels
 unlabeled_papers = [

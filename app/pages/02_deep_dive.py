@@ -37,18 +37,36 @@ st.markdown("Browse and search through your collection of papers.")
 with st.spinner("Fetching papers..."):
 
     def get_papers():
+        # Define required attributes
+        required_attributes = [
+            "arxiv_data.title",
+            "arxiv_data.published",
+            "arxiv_data.entry_id",
+            "label",
+            "status",
+            "analysis.short_description",
+        ]
+
+        # Check if papers are already in session state and have all required attributes
+        if "papers_cache" in st.session_state:
+            papers = st.session_state.papers_cache
+            # Check if all required attributes are present in the first paper
+            if papers and all(
+                any(p.get(attr) is not None for p in papers)
+                for attr in required_attributes
+            ):
+                return convert_to_dataframe(papers)
+
+        # If not in cache or missing attributes, fetch from database
         papers = fetch_specific_attributes_from_collection(
-            attributes=[
-                "arxiv_data.title",
-                "arxiv_data.published",
-                "arxiv_data.entry_id",
-                "label",
-                "status",
-                "analysis.short_description",
-            ],
+            attributes=required_attributes,
             filters=[("status", "==", "processed")],
         )
+        # Cache the papers in session state
+        st.session_state.papers_cache = papers
+        return convert_to_dataframe(papers)
 
+    def convert_to_dataframe(papers):
         # Convert to DataFrame format
         papers_data = {
             "Title": [p.get("arxiv_data.title", "") for p in papers],
