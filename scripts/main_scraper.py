@@ -71,7 +71,6 @@ def parse_time(time_str):
 
 
 def main():
-    # Add argument parsing
     parser = argparse.ArgumentParser(
         description="Run scraper with configurable schedule time"
     )
@@ -89,8 +88,13 @@ def main():
     time_str = current_time.strftime("%Y-%m-%d %H:%M:%S %Z")
     logger.info(f"Starting main scraper service at {time_str}")
 
-    # Schedule job to run at specified time Pacific Time
-    schedule.every().day.at(args.time.strftime("%H:%M")).do(run_scrapers).tag(
+    # Convert Pacific Time to system local time for scheduling
+    pt_time = datetime.combine(datetime.now(), args.time)
+    pt_time = pt_timezone.localize(pt_time)
+    local_time = pt_time.astimezone().time()
+
+    # Schedule job to run at the converted local time
+    schedule.every().day.at(local_time.strftime("%H:%M")).do(run_scrapers).tag(
         "pacific-time"
     )
 

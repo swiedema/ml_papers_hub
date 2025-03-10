@@ -159,6 +159,15 @@ class Arxiv:
         return [self.to_dict(paper) for paper in self.papers]
 
 
+def get_arxiv_id(url: str) -> str:
+    # Extract the arxiv ID from the URL
+    arxiv_id = url.split("/")[-1].split("v")[0]
+    if is_arxiv_id(arxiv_id):
+        return arxiv_id
+    else:
+        raise ValueError(f"Invalid URL: {url}")
+
+
 def is_arxiv_id(id: str) -> bool:
     # Check if string matches format 'XXXX.XXXX' where X are digits
     if not isinstance(id, str):

@@ -5,7 +5,7 @@ from src.firebase import (
 )
 from src.pdf_parser import bytes_to_pil_image
 
-st.set_page_config(page_title="Label Papers", page_icon="🏷️", layout="wide")
+st.set_page_config(page_title="Quickly Label Papers", page_icon="🏷️", layout="wide")
 
 
 def update_label(label_value):
@@ -28,35 +28,30 @@ def update_label(label_value):
 # Create a row for the title and refresh button
 title_col, refresh_col = st.columns([6, 1])
 with title_col:
-    st.title("Label Papers")
+    st.title("Quickly Manually Label Papers")
 with refresh_col:
     if st.button(
         "🔄", help="Refresh Papers", key="refresh_button", use_container_width=True
     ):
-        st.session_state.papers = None
         st.session_state.current_index = 0
         st.rerun()
 
-# Fetch papers that need labeling
-if st.session_state.get("papers") is None:
-    with st.spinner("Fetching unlabeled papers. This may take a few seconds..."):
-        papers = fetch_specific_attributes_from_collection(
-            attributes=[
-                "arxiv_data.title",
-                "arxiv_data.abstract",
-                "analysis",
-                "thumbnail",
-                "label",
-            ],
-            filters=[("status", "==", "processed")],
-        )
-        st.session_state["papers"] = papers
-else:
-    papers = st.session_state["papers"]
-
-# Add this after the papers fetch but before the unlabeled_papers filter
+# Initialize current_index if not exists
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
+
+# Fetch papers that need labeling
+with st.spinner("Fetching papers..."):
+    papers = fetch_specific_attributes_from_collection(
+        attributes=[
+            "arxiv_data.title",
+            "arxiv_data.abstract",
+            "analysis",
+            "thumbnail",
+            "label",
+        ],
+        filters=[("status", "==", "processed")],
+    )
 
 # Filter out papers that already have labels
 unlabeled_papers = [

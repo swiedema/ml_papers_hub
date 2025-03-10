@@ -53,10 +53,11 @@ def fetch_specific_attributes_from_collection(
     attributes: list[str],
     collection_name: str = "papers_app",
     filters: list[tuple] = None,
+    limit: int = None,
     logger=None,
 ) -> list[dict]:
     """
-    Fetches specific attributes from documents in a Firestore collection with optional filtering.
+    Fetches specific attributes from documents in a Firestore collection with optional filtering and limit.
 
     Args:
         attributes (list[str]): List of field paths to fetch. Can include nested paths using dots.
@@ -64,7 +65,7 @@ def fetch_specific_attributes_from_collection(
         collection_name (str): Name of the Firestore collection
         filters (list[tuple]): Optional list of filter conditions, each as a tuple of (field, operator, value)
                 e.g. [('status', '==', 'pending'), ('created_at', '>', '2023-01-01')]
-                Supported operators: '==', '!=', '<', '<=', '>', '>=', 'array_contains', 'in', 'array_contains_any'
+        limit (int, optional): Maximum number of documents to return
         logger: Optional logger instance
 
     Returns:
@@ -81,6 +82,10 @@ def fetch_specific_attributes_from_collection(
         if filters:
             for field, operator, value in filters:
                 query = query.where(field, operator, value)
+
+        # Apply limit if provided
+        if limit is not None:
+            query = query.limit(limit)
 
         # Execute the query
         docs = query.get()
