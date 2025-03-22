@@ -33,10 +33,11 @@ def check_duplicate_title(title):
     )
 
     title = title.lower().strip()
+
     for paper in existing_papers:
         # Check both arxiv papers and locally uploaded papers
-        arxiv_title = paper.get("arxiv_data.title", "").lower().strip()
-        local_title = paper.get("title", "").lower().strip()
+        arxiv_title = (paper.get("arxiv_data.title") or "").lower().strip()
+        local_title = (paper.get("title") or "").lower().strip()
 
         if title == arxiv_title or title == local_title:
             return True

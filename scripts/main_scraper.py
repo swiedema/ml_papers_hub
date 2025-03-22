@@ -88,17 +88,10 @@ def main():
     time_str = current_time.strftime("%Y-%m-%d %H:%M:%S %Z")
     logger.info(f"Starting main scraper service at {time_str}")
 
-    # Convert Pacific Time to system local time for scheduling
-    pt_time = datetime.combine(datetime.now(), args.time)
-    pt_time = pt_timezone.localize(pt_time)
-    local_time = pt_time.astimezone().time()
+    # Schedule job to run every hour
+    schedule.every().hour.do(run_scrapers).tag("pacific-time")
 
-    # Schedule job to run at the converted local time
-    schedule.every().day.at(local_time.strftime("%H:%M")).do(run_scrapers).tag(
-        "pacific-time"
-    )
-
-    logger.info(f"Scheduled daily run for {args.time.strftime('%H:%M')} PT")
+    logger.info("Scheduled to run every hour")
 
     # Keep the script running
     while True:

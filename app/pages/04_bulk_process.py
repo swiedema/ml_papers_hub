@@ -6,13 +6,272 @@ from src.firebase import (
 )
 from google import genai
 import os
+import tempfile
 from dotenv import load_dotenv
+from src.arxiv import Arxiv
+from src.pdf_parser import create_pdf_thumbnail, compress_pdf
+from pydantic import BaseModel
 
 load_dotenv()
 
 # Initialize Gemini
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 gemini_client = genai.Client(api_key=gemini_api_key)
+
+
+# Define PaperAnalysis model for Gemini response
+class PaperAnalysis(BaseModel):
+    summary: str
+    short_description: str
+    problem_description: str
+    proposed_method: str
+    conclusion_and_limitations: str
+
+
+# Function to get paper analysis using Gemini
+def get_paper_analysis(pdf_path):
+    """Generate paper analysis using Gemini API."""
+    import pathlib
+
+    filepath = pathlib.Path(pdf_path)
+
+    print("[ANALYSIS] Starting paper analysis with Gemini")
+    print(f"[ANALYSIS] PDF path: {pdf_path}")
+
+    prompt = """
+    Analyze this academic machine learning research paper and provide a 
+    comprehensive analysis with the following structure:
+
+    1. SUMMARY: Provide a thorough overview of the paper's key contributions, 
+    methodology, and findings.
+
+    2. SHORT DESCRIPTION (TLDR - 50-100 words): Provide a concise overview that covers:
+       - The problem/challenge being addressed
+       - The proposed solution/methodology
+       - Key results/findings
+       - Main limitations or future work directions
+       Make it accessible while maintaining technical accuracy.
+
+    3. PROBLEM STATEMENT: Clearly articulate the specific research gap or 
+    challenge the paper addresses, including why this problem is significant.
+
+    4. METHODOLOGY:
+       - Detail the novel technical approach proposed
+       - Highlight key algorithmic innovations
+       - Explain the theoretical foundations
+       - Describe implementation details critical to understanding the method
+
+    5. RESULTS:
+       - Summarize quantitative performance metrics
+       - Compare against relevant baselines
+       - Note any particularly impressive or unexpected findings
+
+    6. LIMITATIONS AND FUTURE WORK:
+       - Identify constraints or weaknesses acknowledged by the authors
+       - Note any unaddressed edge cases or scenarios
+       - Mention proposed directions for future research
+
+    Use precise technical terminology appropriate for an expert in machine learning. 
+    Focus on conveying the technical depth and nuance of the research.
+    """
+
+    try:
+        print("[ANALYSIS] Sending request to Gemini API")
+        from google.genai import types
+
+        response = gemini_client.models.generate_content(
+            model="gemini-2.0-flash",
+            config={
+                "response_mime_type": "application/json",
+                "response_schema": PaperAnalysis,
+            },
+            contents=[
+                types.Part.from_bytes(
+                    data=filepath.read_bytes(),
+                    mime_type="application/pdf",
+                ),
+                prompt,
+            ],
+        )
+        print("[ANALYSIS] Received response from Gemini API")
+
+        # Convert response to PaperAnalysis model and then to dict
+        try:
+            print("[ANALYSIS] Parsing response to PaperAnalysis model")
+            analysis_dict = PaperAnalysis.model_validate_json(
+                response.text
+            ).model_dump()
+            print("[ANALYSIS] Successfully parsed response")
+            return analysis_dict
+        except Exception as e:
+            print(f"[ANALYSIS] ERROR: Failed to parse analysis response: {str(e)}")
+            print(f"[ANALYSIS] Response text: {response.text[:200]}...")
+            return None
+
+    except Exception as e:
+        print(f"[ANALYSIS] ERROR: Exception during Gemini API call: {str(e)}")
+        return None
+
+
+# Function to process a single paper
+def process_single_paper(paper_info, temp_dir, arxiv_client):
+    """Process a single paper with all the steps"""
+    paper_id = paper_info["document_id"]
+    paper_arxiv_id = paper_info["arxiv_data.entry_id"].split("/")[-1].split("v")[0]
+
+    print(
+        f"[PROCESS] Starting to process paper {paper_id} (arXiv ID: {paper_arxiv_id})"
+    )
+
+    # Download the paper
+    print(f"[PROCESS] Step 1: Downloading paper from arXiv")
+    papers = arxiv_client.get_papers([paper_arxiv_id], verbose=True)
+    if not papers:
+        print(f"[PROCESS] ERROR: Could not fetch paper {paper_arxiv_id} from arXiv")
+        return False
+
+    paper_paths, not_downloaded = arxiv_client.download_papers(
+        dirpath=temp_dir, verbose=True
+    )
+    print(f"[PROCESS] Downloaded paper from arXiv")
+
+    # Check if paper was downloaded
+    pdf_path = [p for p in paper_paths if paper_arxiv_id in p]
+    if len(pdf_path) == 0:
+        print(f"[PROCESS] ERROR: PDF not found for paper {paper_arxiv_id}")
+        return False
+
+    pdf_path = pdf_path[0]
+    if not os.path.exists(pdf_path):
+        print(f"[PROCESS] ERROR: PDF file does not exist at path {pdf_path}")
+        return False
+
+    try:
+        # Generate thumbnail in temporary directory
+        print(f"[PROCESS] Step 2: Generating thumbnail")
+        thumb_path = os.path.join(temp_dir, f"{paper_id}_thumb.png")
+        thumbnail_bytes = create_pdf_thumbnail(
+            pdf_path, thumb_path, max_size_bytes=300 * 1024  # 300 kb
+        )
+        print(f"[PROCESS] Thumbnail generated successfully")
+
+        # Compress PDF
+        print(f"[PROCESS] Step 3: Compressing PDF")
+        pdf_path, compression_ratio = compress_pdf(
+            pdf_path, pdf_path, remove_images=True
+        )
+        size_mb = os.path.getsize(pdf_path) / (1024 * 1024)
+        print(
+            f"[PROCESS] PDF compressed successfully. New size: {size_mb:.2f} MB, Compression ratio: {compression_ratio:.2f}%"
+        )
+
+        # Generate paper analysis
+        print(f"[PROCESS] Step 4: Generating paper analysis with Gemini")
+        analysis = get_paper_analysis(pdf_path)
+
+        if analysis:
+            print(f"[PROCESS] Analysis generated successfully")
+            # Update paper with new data
+            print(f"[PROCESS] Step 5: Updating paper in Firestore")
+            update_data = {
+                "status": "processed",
+                "thumbnail": thumbnail_bytes,
+                "analysis": analysis,
+            }
+            update_successful = update_paper_in_firestore(
+                paper_id=paper_id,
+                update_data=update_data,
+            )
+
+            if not update_successful:
+                print(
+                    f"[PROCESS] ERROR: Failed to update paper {paper_id} in Firestore"
+                )
+                return False
+            print(f"[PROCESS] Paper {paper_id} processed successfully!")
+            return True
+        else:
+            print(f"[PROCESS] ERROR: Failed to generate analysis for paper {paper_id}")
+            print(f"[PROCESS] Updating paper status to ERROR-gen_analysis")
+            update_paper_in_firestore(
+                paper_id=paper_id,
+                update_data={"status": "ERROR-gen_analysis"},
+            )
+            return False
+
+    except Exception as e:
+        print(
+            f"[PROCESS] ERROR: Exception occurred while processing paper {paper_id}: {str(e)}"
+        )
+        return False
+
+
+# Function to get new papers
+def get_new_papers():
+    """Fetch papers with 'new' status from Firestore"""
+    print("[NEW PAPERS] Checking for papers with 'new' status")
+    required_attributes = [
+        "arxiv_data.title",
+        "arxiv_data.abstract",
+        "arxiv_data.published",
+        "arxiv_data.entry_id",
+        "status",
+    ]
+
+    # Fetch papers with 'new' status
+    papers = fetch_specific_attributes_from_collection(
+        attributes=required_attributes,
+        filters=[("status", "==", "new")],
+    )
+
+    print(f"[NEW PAPERS] Found {len(papers)} papers with 'new' status")
+    return papers
+
+
+# Function to process multiple papers
+def process_papers(papers_info):
+    """Process multiple papers with 'new' status"""
+    print(f"[PROCESS] Starting to process {len(papers_info)} papers with 'new' status")
+    arxiv_client = Arxiv()
+
+    # Create progress indicators
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    success_count = 0
+    total_papers = len(papers_info)
+
+    # Create temporary directory for processing
+    with tempfile.TemporaryDirectory() as temp_dir:
+        print(f"[PROCESS] Created temporary directory: {temp_dir}")
+        for idx, paper_info in enumerate(papers_info):
+            # Update progress
+            progress = (idx) / total_papers
+            progress_bar.progress(progress)
+            status_text.text(
+                f"Processing paper {idx + 1}/{total_papers}: "
+                f"{paper_info.get('arxiv_data.title', '')[:50]}..."
+            )
+
+            print(f"[PROCESS] Processing paper {idx + 1}/{total_papers}")
+            # Process the paper
+            success = process_single_paper(paper_info, temp_dir, arxiv_client)
+            if success:
+                success_count += 1
+                print(f"[PROCESS] Paper processed successfully")
+            else:
+                print(f"[PROCESS] Paper processing failed")
+
+        # Complete the progress bar
+        progress_bar.progress(1.0)
+        status_text.text(
+            f"Processed {success_count}/{total_papers} papers successfully!"
+        )
+        print(
+            f"[PROCESS] Completed processing {success_count}/{total_papers} papers successfully"
+        )
+
+    return success_count
 
 
 def classify_paper(paper, labels_list, model="gemini-2.0-flash"):
@@ -329,6 +588,45 @@ with refresh_col:
     }
     if st.button("🔄", **button_params):
         st.rerun()
+
+# Check for papers with "new" status
+print("[UI] Checking for papers with 'new' status")
+new_papers = get_new_papers()
+if new_papers:
+    print(f"[UI] Found {len(new_papers)} papers with 'new' status, displaying warning")
+    with st.container(border=True):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.warning(
+                f"⚠️ There are {len(new_papers)} unprocessed papers with 'new' status."
+            )
+            st.markdown(
+                "These papers need to be processed before they can be used in the app."
+            )
+        with col2:
+            if st.button(
+                "Process New Papers", type="primary", use_container_width=True
+            ):
+                print("[UI] User clicked 'Process New Papers' button")
+                with st.spinner("Processing papers..."):
+                    success_count = process_papers(new_papers)
+                    if success_count > 0:
+                        print(f"[UI] Successfully processed {success_count} papers")
+                        st.success(
+                            f"Successfully processed {success_count} out of {len(new_papers)} papers!"
+                        )
+                        # Clear the cache to refresh the papers list
+                        if "papers_cache" in st.session_state:
+                            del st.session_state.papers_cache
+                            print("[UI] Cleared papers cache")
+                        st.rerun()
+                    else:
+                        print("[UI] Failed to process any papers")
+                        st.error(
+                            "Failed to process any papers. Check the logs for details."
+                        )
+else:
+    print("[UI] No papers with 'new' status found")
 
 st.markdown("Bulk process your papers with auto-classification and auto-grouping.")
 

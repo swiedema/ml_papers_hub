@@ -21,7 +21,11 @@ def scrape_paper_urls_from_gmail(only_arxiv_urls=True):
         "Content-Type": "application/json",
     }
     response = requests.request("POST", url, json=payload, headers=headers)
-    run_id = response.json()["run_id"]
+    try:
+        run_id = response.json()["run_id"]
+    except Exception as e:
+        print(response.json())
+        raise Exception("Failed to get run_id") from e
 
     # wait till the run is finished
     print(f"Waiting for run {run_id} to finish...")
