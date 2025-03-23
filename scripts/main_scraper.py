@@ -4,9 +4,8 @@ import os
 import sys
 import time
 import logging
-import schedule
 import pytz
-from datetime import datetime, time as dt_time
+from datetime import datetime, timedelta
 from papers_scraper import scrape_papers
 from gen_papers_info import process_papers
 import argparse
@@ -71,46 +70,41 @@ def parse_time(time_str):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Run scraper with configurable schedule time"
-    )
-    parser.add_argument(
-        "--time",
-        type=parse_time,
-        default=dt_time(0, 0),  # Default to midnight
-        help="Daily trigger time in HH:MM format (24-hour), default: 00:00",
-    )
-    args = parser.parse_args()
-
     logger = setup_logging()
     pt_timezone = pytz.timezone("America/Los_Angeles")
     current_time = datetime.now(pt_timezone)
     time_str = current_time.strftime("%Y-%m-%d %H:%M:%S %Z")
     logger.info(f"Starting main scraper service at {time_str}")
 
-    # Schedule job to run every hour
-    schedule.every().hour.do(run_scrapers).tag("pacific-time")
+    # Calculate next hour
+    next_run = current_time.replace(minute=0, second=0, microsecond=0)
+    if next_run <= current_time:
+        next_run += timedelta(hours=1)
 
-    logger.info("Scheduled to run every hour")
+    logger.info(f"Next run scheduled for: {next_run.strftime('%Y-%m-%d %H:%M:%S %Z')}")
 
-    # Keep the script running
     while True:
         try:
-            next_run = schedule.next_run()
-            if next_run:
-                next_run_pt = next_run.astimezone(pt_timezone)
-                time_str = next_run_pt.strftime("%Y-%m-%d %H:%M:%S %Z")
-                logger.debug(f"Next run scheduled for: {time_str}")
+            current_time = datetime.now(pt_timezone)
 
-            schedule.run_pending()
-            time.sleep(60)  # Check every minute
+            if current_time >= next_run:
+                run_scrapers()
+                next_run = current_time.replace(
+                    minute=0, second=0, microsecond=0
+                ) + timedelta(hours=1)
+                logger.info(
+                    f"Next run scheduled for: {next_run.strftime('%Y-%m-%d %H:%M:%S %Z')}"
+                )
+
+            # Sleep for 60 seconds before checking again
+            time.sleep(60)
 
         except KeyboardInterrupt:
             logger.info("Received keyboard interrupt, shutting down...")
             sys.exit(0)
         except Exception as e:
             logger.exception(f"An error occurred in the main loop: {str(e)}")
-            # Continue running despite errors
+            time.sleep(60)  # Wait a minute before retrying on error
             continue
 
 
