@@ -39,6 +39,8 @@ def scrape_paper_urls_from_gmail(only_arxiv_urls=True):
     while not run_status == "DONE":
         response = requests.request("GET", url, headers=headers, params=params)
         run_status = response.json()["state"]
+        if run_status == "FAILED":
+            return []
         time.sleep(1)
 
     # then use the run_id to get the outputs
