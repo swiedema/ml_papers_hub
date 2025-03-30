@@ -21,7 +21,9 @@ from src.pdf_parser import create_pdf_thumbnail, compress_pdf
 
 
 os.environ["GRPC_FORK_SUPPORT_ENABLED"] = "0"
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.getenv("PROJECT_DIR")
+if not PROJECT_DIR:
+    raise ValueError("PROJECT_DIR environment variable not set")
 
 
 class PaperAnalysis(BaseModel):

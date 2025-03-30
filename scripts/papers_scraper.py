@@ -3,6 +3,7 @@
 from src.scrapers.ak_scraper import scrape_ak_huggingface_daily_paper_titles
 from src.scrapers.gmail_scraper import scrape_paper_urls_from_gmail
 from src.arxiv import Arxiv, is_arxiv_id
+from src.cache import PaperCache
 import logging
 import os
 import sys
@@ -13,13 +14,15 @@ from src.firebase import (
     add_papers_to_firestore,
 )
 
-
-PROJECT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+# Get PROJECT_DIR from environment variable
+PROJECT_DIR = os.getenv("PROJECT_DIR")
+if not PROJECT_DIR:
+    raise ValueError("PROJECT_DIR environment variable not set")
 
 
 # Configure logging
 def setup_logging(log_level=logging.INFO):
-    log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
+    log_dir = os.path.join(PROJECT_DIR, "logs")
     os.makedirs(log_dir, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -54,6 +57,10 @@ def scrape_papers():
         arxiv = Arxiv()
         logger.info("Initialized Arxiv client")
 
+        # initialize cache
+        cache = PaperCache()
+        logger.info("Initialized paper cache")
+
         # scrape ak huggingface daily paper titles
         logger.info("Scraping Hugging Face daily paper titles")
         paper_titles = scrape_ak_huggingface_daily_paper_titles()
@@ -83,26 +90,47 @@ def scrape_papers():
         ]
         logger.info(f"Converted {len(papers_dict)} papers to dict")
 
-        # fetch papers from firestore
-        fb_papers_dict = fetch_specific_attributes_from_collection(
-            attributes=["arxiv_data.title", "status"],
-            filters=[("status", "!=", "test")],
-            logger=logger,
-        )
-        logger.info(f"Fetched {len(fb_papers_dict)} papers from firestore")
-
-        # remove papers from papers_dict that are already in fb_papers_dict
-        fb_papers_titles = [paper["arxiv_data.title"] for paper in fb_papers_dict]
-        papers_dict = [
-            paper
-            for paper in papers_dict
-            if paper["arxiv_data"]["title"] not in fb_papers_titles
-        ]
-        logger.info(f"{len(papers_dict)} new papers left to save to firestore")
+        # filter out papers that are in cache
+        papers_dict = cache.filter_papers(papers_dict)
+        logger.info(f"{len(papers_dict)} papers remaining after cache filtering")
 
         # save papers to firestore
-        add_papers_to_firestore(papers_dict, collection_name="papers_app")
-        logger.info(f"Saved {len(papers_dict)} papers to firestore")
+        if papers_dict:
+            try:
+                # fetch papers from firestore
+                fb_papers_dict = fetch_specific_attributes_from_collection(
+                    attributes=["arxiv_data.title", "status"],
+                    filters=[("status", "!=", "test")],
+                    logger=logger,
+                )
+                logger.info(f"Fetched {len(fb_papers_dict)} papers from firestore")
+
+                # remove papers from papers_dict that are already in fb_papers_dict
+                fb_papers_titles = [
+                    paper["arxiv_data.title"] for paper in fb_papers_dict
+                ]
+                papers_dict = [
+                    paper
+                    for paper in papers_dict
+                    if paper["arxiv_data"]["title"] not in fb_papers_titles
+                ]
+                logger.info(f"{len(papers_dict)} new papers left to save to firestore")
+
+                # save papers to firestore
+                add_papers_to_firestore(papers_dict, collection_name="papers_app")
+                logger.info(f"Saved {len(papers_dict)} papers to firestore")
+
+                # Add successfully processed papers to cache
+                for paper in papers_dict:
+                    cache.add_processed_paper(paper["arxiv_data"]["title"])
+            except Exception as e:
+                logger.error(f"Error saving papers to firestore: {e}")
+
+                # Add failed papers to error cache
+                for paper in papers_dict:
+                    cache.add_error_paper(paper["arxiv_data"]["title"])
+                raise
+
         logger.info("Papers scraper completed successfully")
 
     except Exception as e:

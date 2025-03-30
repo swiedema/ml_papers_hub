@@ -9,9 +9,19 @@ from datetime import datetime, timedelta
 from papers_scraper import scrape_papers
 from gen_papers_info import process_papers
 import argparse
+from src.scrapers.ak_scraper import scrape_ak_huggingface_daily_paper_titles
+from src.scrapers.gmail_scraper import scrape_paper_urls_from_gmail
+from src.arxiv import Arxiv, is_arxiv_id
+from src.cache import PaperCache
+from src.firebase import (
+    initialize_firebase_client,
+    fetch_specific_attributes_from_collection,
+    add_papers_to_firestore,
+)
 
-
-PROJECT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+PROJECT_DIR = os.getenv("PROJECT_DIR")
+if not PROJECT_DIR:
+    raise ValueError("PROJECT_DIR environment variable not set")
 
 
 def setup_logging(log_level=logging.INFO):
