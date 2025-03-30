@@ -23,7 +23,8 @@ if not PROJECT_DIR:
 # Configure logging
 def setup_logging(log_level=logging.INFO):
     log_dir = os.path.join(PROJECT_DIR, "logs")
-    os.makedirs(log_dir, exist_ok=True)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = os.path.join(log_dir, f"papers_scraper_{timestamp}.log")

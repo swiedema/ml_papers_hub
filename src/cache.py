@@ -13,7 +13,8 @@ class PaperCache:
                 raise ValueError("PROJECT_DIR environment variable not set")
 
             cache_dir = os.path.join(project_dir, "cache")
-            os.makedirs(cache_dir, exist_ok=True)
+            if not os.path.exists(cache_dir):
+                os.makedirs(cache_dir, exist_ok=True)
             cache_file = os.path.join(cache_dir, "paper_cache.json")
 
         self.cache_file = cache_file

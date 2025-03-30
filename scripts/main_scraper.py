@@ -27,7 +27,8 @@ if not PROJECT_DIR:
 def setup_logging(log_level=logging.INFO):
     """Configure logging with timestamp and level."""
     log_dir = os.path.join(PROJECT_DIR, "logs")
-    os.makedirs(log_dir, exist_ok=True)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = os.path.join(log_dir, f"main_scraper_{timestamp}.log")
