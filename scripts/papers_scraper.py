@@ -7,7 +7,7 @@ from src.cache import PaperCache
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.firebase import (
     initialize_firebase_client,
     fetch_specific_attributes_from_collection,
@@ -99,11 +99,16 @@ def scrape_papers():
         if papers_dict:
             try:
                 # fetch papers from firestore
+                x_days_ago = datetime.now() - timedelta(days=7)
                 fb_papers_dict = fetch_specific_attributes_from_collection(
-                    attributes=["arxiv_data.title", "status"],
-                    filters=[("status", "!=", "test")],
-                    logger=logger,
+                    attributes=["arxiv_data.title", "status", "created_at"],
+                    filters=[
+                        ("created_at", ">=", x_days_ago),
+                    ],
                 )
+                fb_papers_dict = [
+                    paper for paper in fb_papers_dict if paper["status"] != "test"
+                ]
                 logger.info(f"Fetched {len(fb_papers_dict)} papers from firestore")
 
                 # remove papers from papers_dict that are already in fb_papers_dict
