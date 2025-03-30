@@ -37,8 +37,6 @@ class PaperAnalysis(BaseModel):
 def setup_logging(log_level=logging.INFO):
     """Configure logging with timestamp and level."""
     log_dir = os.path.join(PROJECT_DIR, "logs")
-    print(f"Log dir: {log_dir}")
-    print(os.path.dirname(__file__))
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
 
